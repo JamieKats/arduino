@@ -1,9 +1,10 @@
 #include <Arduino.h>
 
-int pwm_pin = 9; // Pin 9 has timer/counter 2
-int rpm_pin = 2;
-int baud_rate = 9600;
-int icr = 639;
+// const int pwm_pin = 9; // Pin 9 has timer/counter 2
+const int pwm_pin = 3; // Pin 9 has timer/counter 2
+const int rpm_pin = 2;
+const int baud_rate = 9600;
+const int icr = 639;
 int duty_cycle = 0;
 volatile unsigned int count = 0; // Variable used in interrupts to be volatile
 
@@ -20,20 +21,26 @@ int main(void) {
   attachInterrupt(digitalPinToInterrupt(rpm_pin), incremment_counter, RISING);
 
   // Setup registers for fast PWM
-  setup_registers();
+  // setup_registers();
+  pinMode(pwm_pin, OUTPUT);
 
   while ( true ) {
     analogWrite(pwm_pin, 0);
     Serial.print("Duty cycle (%) = ");
     Serial.println(0);
-    get_fan_rpm();
     delay(1000); // Delay before next reading
+    get_fan_rpm();
 
     analogWrite(pwm_pin, 255);
     Serial.print("Duty cycle (%) = ");
     Serial.println(100);
-    get_fan_rpm();
     delay(1000); // Delay before next reading
+    get_fan_rpm();
+
+
+    // // TEST
+    // analogWrite(pwm_pin, 255);
+    // get_fan_rpm();
   }
   return 0;
 }
