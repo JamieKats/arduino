@@ -1,7 +1,6 @@
 #include <Arduino.h>
 
-// const int pwm_pin = 9; // Pin 9 has timer/counter 2
-const int pwm_pin = 3; // Pin 9 has timer/counter 2
+const int pwm_pin = 9; // Pin 9 has timer/counter 2
 const int rpm_pin = 2;
 const int baud_rate = 9600;
 const int icr = 639;
@@ -21,8 +20,8 @@ int main(void) {
   attachInterrupt(digitalPinToInterrupt(rpm_pin), incremment_counter, RISING);
 
   // Setup registers for fast PWM
-  // setup_registers();
-  pinMode(pwm_pin, OUTPUT);
+  setup_pwm_registers();
+  // pinMode(pwm_pin, OUTPUT);
 
   while ( true ) {
     analogWrite(pwm_pin, 0);
@@ -45,7 +44,7 @@ int main(void) {
   return 0;
 }
 
-void setup_registers() {
+void setup_pwm_registers() {
   Serial.println("Setting up registers...");
 
   // Timer counter 1 == 8-bit timer: OC0A and OC0B which is pins PD5 (D5) and PD6 (D6)
