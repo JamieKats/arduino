@@ -1,11 +1,27 @@
+// Max fan speed for intel E41997-002 = 2800rpm
 #include <Arduino.h>
 
 const int pwm_pin = 9; // Pin 9 has timer/counter 2
 const int rpm_pin = 2;
 const int baud_rate = 9600;
 const int icr = 639;
-int duty_cycle = 0;
+int duty_cycle = 20;
 volatile unsigned int count = 0; // Variable used in interrupts to be volatile
+bool raw_reg_mode = false;
+
+// Fan type struct
+typedef struct {
+  char fantype;
+  uint8_t fandiv;
+}fanspec;
+
+fanspec fanspace[3] = {
+  {0,1},
+  {1,2},
+  {2,8}
+};
+
+char fan_type = 2;
 
 int main(void) {
   int start_time;
@@ -24,22 +40,13 @@ int main(void) {
   // pinMode(pwm_pin, OUTPUT);
 
   while ( true ) {
-    analogWrite(pwm_pin, 0);
-    Serial.print("Duty cycle (%) = ");
-    Serial.println(0);
+    set_duty_cycle(20);
     delay(1000); // Delay before next reading
-    get_fan_rpm();
+    read_fan_rpm();
 
-    analogWrite(pwm_pin, 255);
-    Serial.print("Duty cycle (%) = ");
-    Serial.println(100);
-    delay(1000); // Delay before next reading
-    get_fan_rpm();
-
-
-    // // TEST
-    // analogWrite(pwm_pin, 255);
-    // get_fan_rpm();
+    // set_duty_cycle(100);
+    // delay(1000); // Delay before next reading
+    // read_fan_rpm();
   }
   return 0;
 }
@@ -50,40 +57,44 @@ void setup_pwm_registers() {
   // Timer counter 1 == 8-bit timer: OC0A and OC0B which is pins PD5 (D5) and PD6 (D6)
   pinMode(pwm_pin, OUTPUT);
 
-  // Clear timer/counter control registers
-  TCCR1A = 0;
-  TCCR1B = 0;
+  // // Clear timer/counter control registers
+  // TCCR1A = 0;
+  // TCCR1B = 0;
 
-  // Set Fast PWM with TOP = ICR1 and no prescaler
-  // Set Fast PWM mode clear OC1A on compare match
-  TCCR1A |= (1 << COM1A1);
+  // // Set Fast PWM with TOP = ICR1 and no prescaler
+  // // Set Fast PWM mode clear OC1A on compare match
+  // TCCR1A |= (1 << COM1A1);
 
-  // Set Fast PWM mode TOP = ICR1
-  TCCR1A |= (1 << WGM11);
-  TCCR1B |= (1 << WGM12);
-  TCCR1B |= (1 << WGM13);
+  // // Set Fast PWM mode TOP = ICR1
+  // TCCR1A |= (1 << WGM11);
+  // TCCR1B |= (1 << WGM12);
+  // TCCR1B |= (1 << WGM13);
 
-  // Set no prescaling and start PWM
-  TCCR1B |= (1 << CS10);
+  // // Set no prescaling and start PWM
+  // TCCR1B |= (1 << CS10);
 
-  // Set ICR1 = TOP = 639
-  // Calculate from fpwm = fclk/N*(1+TOP)
-  // Where:
-  //  fpwm = 25kHz (fan frequency)
-  //  fclk = 16MHz (Atmega328p speed)
-  //  N = 1 (no prescaler applied)
-  ICR1H = icr >> 8;
-  ICR1L = icr & 0x00FF;
+  // // Set ICR1 = TOP = 639
+  // // Calculate from fpwm = fclk/N*(1+TOP)
+  // // Where:
+  // //  fpwm = 25kHz (fan frequency)
+  // //  fclk = 16MHz (Atmega328p speed)
+  // //  N = 1 (no prescaler applied)
+  // ICR1H = icr >> 8;
+  // ICR1L = icr & 0x00FF;
 
-  OCR1A = icr * (duty_cycle / 100.0);
+  // OCR1A = (int)icr * (duty_cycle / 100.0);
 
   Serial.println("Registers setup!");
 }
 
-void get_fan_rpm() {
+void read_fan_rpm() {
   count = 0;
+  // Serial.print("count ");
+  // Serial.println(count);
   delay(1000); // Count all interrupts in 1 second
-  int rpm = count * 60 / 2;
+  // Serial.print("count ");
+  // Serial.println(count);
+  int rpm = count * 60 / fanspace[fan_type].fandiv;
 
   Serial.print("Rpm = ");
   Serial.println(rpm);
@@ -91,6 +102,17 @@ void get_fan_rpm() {
 
 void incremment_counter() {
   count++;
+}
+
+void set_duty_cycle(uint8_t duty_cycle) {
+  if (raw_reg_mode) {
+    OCR1A = icr * (duty_cycle / 100.0);
+  } else {
+    analogWrite(pwm_pin, duty_cycle);
+  }
+  Serial.print("Duty cycle (%) = ");
+  Serial.println(duty_cycle);
+  // delay(1000); // Delay before next reading
 }
 
 
